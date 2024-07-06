@@ -15,7 +15,7 @@ crop_sum <- subset(crop_sum, Crop!='')
 crop_sum <- rbind(c("cauliflower", 0), crop_sum)
 
 ggplot(crop_sum, aes(x=Crop, y=as.numeric(n))) +
-  geom_bar(stat="identity", fill="darkcyan") +
+  geom_bar(stat="identity", fill="#24BBE1") +
   xlab('Crop') +
   ylab('Studies') +
   scale_y_continuous(limits = c(0, 80))
@@ -79,7 +79,9 @@ outcome_sum$Resistance <- factor(outcome_sum$Resistance, levels=c("Cold", "Droug
 ggplot(outcome_sum, aes(x=Outcome, y=n, fill=Resistance)) +
   geom_bar(stat="identity") +
   xlab('Outcome') +
-  ylab('Studies')
+  ylab('Studies') +
+  scale_fill_manual(values = c("Cold" = "#ED412A", "Drought" = "#C5962E", "Insect/arthropod" = "#F89D29",
+                               "Pathogen" = "#5FB947", "Other (specify)" = "#24BBE1"))
 
 
 #' Crops by outcome
@@ -91,7 +93,7 @@ outcome_crop_sum$Crop <- factor(outcome_crop_sum$Crop, levels=rev(c("cauliflower
 
 ggplot(outcome_crop_sum, aes(x = Outcome, y = Crop, fill = n)) +
   geom_tile(color = "black") +
-  scale_fill_gradient(low = "white", high = "darkcyan") +
+  scale_fill_gradient(low = "white", high = "#24BBE1") +
   geom_text(aes(label = n), color = "black", size = 4) +
   coord_fixed() +
   xlab('Outcome') +
@@ -114,7 +116,7 @@ scale_sum$`Study scale` <- factor(scale_sum$`Study scale`, levels=c("Plot",
                                                                     "Regional"))
 scale_sum <- rbind(scale_sum, data.frame(`Study scale`="National", n=0, check.names=FALSE))
 ggplot(scale_sum, aes(x=`Study scale`, y=n)) +
-  geom_bar(stat="identity", fill="darkcyan") +
+  geom_bar(stat="identity", fill="#24BBE1") +
   xlab('Study scale') +
   ylab('Studies')
 
@@ -125,7 +127,7 @@ length_sum <- data %>%
 length_sum$`Study length (measurement period in months)` <- as.numeric(length_sum$`Study length (measurement period in months)`)
 
 ggplot(length_sum, aes(x=`Study length (measurement period in months)`)) +
-  geom_histogram(colour="white", fill="darkcyan") +
+  geom_histogram(colour="white", fill="#24BBE1") +
   ylab('Studies') 
 
 #Sample size
@@ -135,12 +137,14 @@ samplesize_sum <- data %>%
 samplesize_sum$`Sample size (Number of true replicates)` <- as.numeric(samplesize_sum$`Sample size (Number of true replicates)`)
 
 ggplot(samplesize_sum, aes(x=`Sample size (Number of true replicates)`, y=n)) +
-  geom_bar(stat="identity", fill="darkcyan") +
+  geom_bar(stat="identity", fill="#24BBE1") +
   ylab('Studies') +
   scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11,12))
 
 
 #' Critical appraisal
+library(readxl)
+library(ggplot2)
 CA_data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/Critical appraisal/CriticalAppraisal MASTER.xlsx", 
                                                   sheet = "forR")
 
@@ -158,11 +162,14 @@ for (i in 6:length(colnames(CA_data))){
 CA_summary$rating <- factor(CA_summary$rating, levels=c("high", "medium", "low", "unclear"))
 CA_summary$question <- factor(CA_summary$question, 
                               levels=c("Appropriate replication level", "Replicate randomisation", "Replication degree", "Treatment matching", "Management differences", "Outcome measured directly", "Measurement extrapolation", "Central line measurement", "Number of plant measurements", "Random plant selection", "Reported drop out", "Reported drop out bias risk", "Missing sites, plots, samples", "Missing sites, plots, samples bias risk", "Selective reporting of results", "Selective reporting of results bias risk", "Control of unexpected events", "FINAL JUDGEMENT"))
+CA_summary <- CA_summary[complete.cases(CA_summary), ]
 
 ggplot(CA_summary, aes(fill=rating, y=n, x=question)) + 
   geom_bar(position="fill", stat="identity") + 
-  scale_fill_manual(values = c("#de5e50", "#f0b96c", "#88e394", "#b3b5b3"), name = "Rating") +
+  scale_fill_manual(values = c("#de5e50", "#f0b96c", "#88e394", "#b3b5b3"), name = "Risk of bias") +
   coord_flip() +
   xlab('Question') +
   ylab('% of studies') +
-  scale_x_discrete(limits=rev)
+  scale_x_discrete(limits=rev) +
+  scale_y_continuous(labels = scales::percent_format(scale = 100))
+

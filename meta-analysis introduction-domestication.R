@@ -106,9 +106,9 @@ forest(model1, addfit=FALSE, cex=0.45, xlab="Effect size (kg/ha)",
        slab=short_citation,
        ilab=crop,
        ilab.xpos=-3900,
-       ylim=c(-1,36),
+       ylim=c(-1,35),
        xlim=c((-6200), (4200)),
-       rows=c(31:23, 18:17, 12:8, 3:3)
+       rows=c(30:22, 17:17, 12:8, 3:3)
 )
 # replace CA text with coloured text
 CA_col <- ES_data$CA_judgement
@@ -117,12 +117,12 @@ CA_col <- gsub('LOW', 'darkgreen', CA_col)
 CA_col <- gsub('MEDIUM', 'darkorange', CA_col)
 CA_col <- gsub('UNCLEAR', 'darkgrey', CA_col)
 text(-2900, 
-     c(31:23, 18:17, 12:8, 3:3), 
+     c(30:22, 17:17, 12:8, 3:3), 
      ES_data$CA_judgement, col=c(CA_col), cex=0.45, font=2)
-text(-3900, 35, 'Crop', cex=0.45, font=2)
-text(-2900, 35, 'CA Judgement', cex=0.45, font=2)
+text(-3900, 34, 'Crop', cex=0.45, font=2)
+text(-2900, 34, 'CA Judgement', cex=0.45, font=2)
 ### add text for the subgroups
-text(-6200, c(32.1, 19.1, 13.1, 4.1), pos=4, c(
+text(-6200, c(31.1, 18.1, 13.1, 4.1), pos=4, c(
                  "Maize",
                  "Potato",
                  "Rice",
@@ -130,11 +130,11 @@ text(-6200, c(32.1, 19.1, 13.1, 4.1), pos=4, c(
 ### add summary polygons for the crop subgroups
 #addpoly(res.caul, row=18.5, mlab=mlabfun("RE Model for Subgroup", res.caul))
 addpoly(res.maize, 
-        row=21.5, 
+        row=20.5, 
         mlab=mlabfun("RE Model for Subgroup", res.maize), cex=0.45, col="darkgrey", border="darkgrey")
-addpoly(res.potato, 
-        row=15.5, 
-        mlab=mlabfun("RE Model for Subgroup", res.potato), cex=0.45, col="darkgrey", border="darkgrey")
+#addpoly(res.potato, 
+#        row=15.5, 
+#        mlab=mlabfun("RE Model for Subgroup", res.potato), cex=0.45, col="darkgrey", border="darkgrey")
 addpoly(res.rice, 
         row=6.5, 
         mlab=mlabfun("RE Model for Subgroup", res.rice), cex=0.45, col="darkgrey", border="darkgrey")
