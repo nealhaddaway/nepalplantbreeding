@@ -4,7 +4,7 @@
 library(readxl)
 library(metafor)
 
-data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/synthesis/Full data extraction MASTER.xlsx", 
+data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/synthesis/Full data extraction sheet.xlsx", 
                   sheet = "full")
 
 

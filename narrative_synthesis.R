@@ -4,8 +4,10 @@
 library(tidyverse)
 library(networkD3)
 library(readxl)
-data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/Data extraction/Meta-data extraction MASTER.xlsx", 
+data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/Data extraction/Meta-data extraction sheet (map), including exclude reasons.xlsx", 
                                           sheet = "Data")
+
+data$Crop <- tolower(data$Crop)
 
 #' Crops
 crop_sum <- data %>% 
@@ -81,10 +83,13 @@ ggplot(outcome_sum, aes(x=Outcome, y=n, fill=Resistance)) +
   xlab('Outcome') +
   ylab('Studies') +
   scale_fill_manual(values = c("Cold" = "#ED412A", "Drought" = "#C5962E", "Insect/arthropod" = "#F89D29",
-                               "Pathogen" = "#5FB947", "Other (specify)" = "#24BBE1"))
+                               "Pathogen" = "#5FB947", "Other (specify)" = "#24BBE1"),
+                    breaks = c("Cold", "Drought", "Insect/arthropod",
+                               "Pathogen", "Other (specify)"))
 
 
 #' Crops by outcome
+data$Outcome <- str_to_sentence(data$Outcome)
 outcome_crop_sum <- data %>% 
   group_by(Outcome, Crop) %>% 
   summarise(n = n())
@@ -105,6 +110,7 @@ ggplot(outcome_crop_sum, aes(x = Outcome, y = Crop, fill = n)) +
 
 #' Combined plot
 #Study scale
+data$`Study scale` <- str_to_sentence(data$`Study scale`)
 scale_sum <- data %>% 
   group_by(`Study scale`) %>% 
   summarise(n = n())
@@ -145,7 +151,7 @@ ggplot(samplesize_sum, aes(x=`Sample size (Number of true replicates)`, y=n)) +
 #' Critical appraisal
 library(readxl)
 library(ggplot2)
-CA_data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/Critical appraisal/CriticalAppraisal MASTER.xlsx", 
+CA_data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/Critical appraisal/Critical appraisal data.xlsx", 
                                                   sheet = "forR")
 
 CA_summary <- data.frame(question=NULL, rating=NULL, n=NULL)
