@@ -4,7 +4,7 @@
 library(readxl)
 library(metafor)
 
-data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/synthesis/Full data extraction MASTER.xlsx", 
+data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/synthesis/Full data extraction sheet.xlsx", 
                   sheet = "full")
 
 
@@ -48,6 +48,11 @@ model1 <- rma.mv(yi=ES,
                 mods=~factor(crop),
                 method="ML", 
                 random=~ID|1)
+model1b <- rma.mv(yi=ES, 
+                  V=PSD, 
+                  data=ES_data, 
+                  method="ML", 
+                  random=~ID|1)
 summary(model1)
 
 ### a little helper function to add Q-test, I^2, and tau^2 estimate info
@@ -106,9 +111,9 @@ forest(model1, addfit=FALSE, cex=0.45, xlab="Effect size (kg/ha)",
        slab=short_citation,
        ilab=crop,
        ilab.xpos=-10500,
-       ylim=c(-1,78),
+       ylim=c(-1,79),
        xlim=c((-16000), (8000)),
-       rows=c(73:57, 52:52, 48:31, 26:3)
+       rows=c(74:58, 53:53, 49:32, 27:3)
 )
 # replace CA text with coloured text
 CA_col <- ES_data$CA_judgement
@@ -117,12 +122,12 @@ CA_col <- gsub('LOW', 'darkgreen', CA_col)
 CA_col <- gsub('MEDIUM', 'darkorange', CA_col)
 CA_col <- gsub('UNCLEAR', 'darkgrey', CA_col)
 text(-8500, 
-     c(73:57, 52:52, 48:31, 26:3), 
+     c(74:58, 53:53, 49:32, 27:3), 
      ES_data$CA_judgement, col=c(CA_col), cex=0.45, font=2)
-text(-10500, 77, 'Crop', cex=0.45, font=2)
-text(-8500, 77, 'CA Judgement', cex=0.45, font=2)
+text(-10500, 78, 'Crop', cex=0.45, font=2)
+text(-8500, 78, 'CA Judgement', cex=0.45, font=2)
 ### add text for the subgroups
-text(-16000, c(74.1, 53.1, 49.1, 27.1), pos=4, c(
+text(-16000, c(75.1, 54.1, 50.1, 28.1), pos=4, c(
                  "Maize",
                  "Potato",
                  "Rice",
@@ -130,15 +135,18 @@ text(-16000, c(74.1, 53.1, 49.1, 27.1), pos=4, c(
 ### add summary polygons for the crop subgroups
 #addpoly(res.caul, row=18.5, mlab=mlabfun("RE Model for Subgroup", res.caul))
 addpoly(res.maize, 
-        row=55.5, 
+        row=56.5, 
         mlab=mlabfun("RE Model for Subgroup", res.maize), cex=0.45, col="darkgrey", border="darkgrey")
 #addpoly(res.potato, row=(n_wheat+6+n_rice+5)-1.5, mlab=mlabfun("RE Model for Subgroup", res.potato))
 addpoly(res.rice, 
-        row=29.5, 
+        row=30.5, 
         mlab=mlabfun("RE Model for Subgroup", res.rice), cex=0.45, col="darkgrey", border="darkgrey")
 addpoly(res.wheat, 
         row=1.5, 
         mlab=mlabfun("RE Model for Subgroup", res.wheat), cex=0.45, col="darkgrey", border="darkgrey")
+addpoly(model1b, 
+        row=-1.5, 
+        mlab=mlabfun("RE Model for all studies", model1), cex=0.45, col="lightgrey", border="lightgrey")
 
 
 ## testing model

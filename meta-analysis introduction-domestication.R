@@ -7,7 +7,6 @@ library(metafor)
 data <- read_excel("~/Library/CloudStorage/GoogleDrive-nealhaddaway@gmail.com/My Drive/contracts/CABI-Juno/Nepal/synthesis/Full data extraction sheet.xlsx", 
                   sheet = "full")
 
-
 # Introduction - Domestication
 # subset data
 int_dom_data <- subset(data, `int-dom`==1)
@@ -48,6 +47,11 @@ model1 <- rma.mv(yi=ES,
                 mods=~factor(crop),
                 method="ML", 
                 random=~ID|1)
+model1b <- rma.mv(yi=ES, 
+                 V=PSD, 
+                 data=ES_data, 
+                 method="ML", 
+                 random=~ID|1)
 summary(model1)
 
 ### a little helper function to add Q-test, I^2, and tau^2 estimate info
@@ -106,10 +110,13 @@ forest(model1, addfit=FALSE, cex=0.45, xlab="Effect size (kg/ha)",
        slab=short_citation,
        ilab=crop,
        ilab.xpos=-3900,
-       ylim=c(-1,35),
+       ylim=c(-1,36),
        xlim=c((-6200), (4200)),
-       rows=c(30:22, 17:17, 12:8, 3:3)
+       rows=c(31:23, 18:17, 12:8, 3:3),
+       at=c(seq(-2000, 2000, 1000))
 )
+text(1500, 17, "point not displayed    ", cex=0.35)
+
 # replace CA text with coloured text
 CA_col <- ES_data$CA_judgement
 CA_col <- gsub('HIGH', 'darkred', CA_col)
@@ -117,12 +124,12 @@ CA_col <- gsub('LOW', 'darkgreen', CA_col)
 CA_col <- gsub('MEDIUM', 'darkorange', CA_col)
 CA_col <- gsub('UNCLEAR', 'darkgrey', CA_col)
 text(-2900, 
-     c(30:22, 17:17, 12:8, 3:3), 
+     c(31:23, 18:17, 12:8, 3:3), 
      ES_data$CA_judgement, col=c(CA_col), cex=0.45, font=2)
-text(-3900, 34, 'Crop', cex=0.45, font=2)
-text(-2900, 34, 'CA Judgement', cex=0.45, font=2)
+text(-3900, 35, 'Crop', cex=0.45, font=2)
+text(-2900, 35, 'CA Judgement', cex=0.45, font=2)
 ### add text for the subgroups
-text(-6200, c(31.1, 18.1, 13.1, 4.1), pos=4, c(
+text(-6200, c(32.1, 19.1, 13.1, 4.1), pos=4, c(
                  "Maize",
                  "Potato",
                  "Rice",
@@ -130,16 +137,22 @@ text(-6200, c(31.1, 18.1, 13.1, 4.1), pos=4, c(
 ### add summary polygons for the crop subgroups
 #addpoly(res.caul, row=18.5, mlab=mlabfun("RE Model for Subgroup", res.caul))
 addpoly(res.maize, 
-        row=20.5, 
+        row=21.5, 
         mlab=mlabfun("RE Model for Subgroup", res.maize), cex=0.45, col="darkgrey", border="darkgrey")
-#addpoly(res.potato, 
-#        row=15.5, 
-#        mlab=mlabfun("RE Model for Subgroup", res.potato), cex=0.45, col="darkgrey", border="darkgrey")
+addpoly(res.potato, 
+        row=15.5, 
+        mlab=mlabfun("RE Model for Subgroup", res.potato), cex=0.45, col="white", border="white", alpha=0)
+text(3157, 15.5, "_", cex=18, col="white")
+text(3080, 15.5, "9213.33 [ -5331.95, 23758.61]", cex=0.465)
 addpoly(res.rice, 
         row=6.5, 
         mlab=mlabfun("RE Model for Subgroup", res.rice), cex=0.45, col="darkgrey", border="darkgrey")
 #addpoly(res.wheat, row=1.5, mlab=mlabfun("RE Model for Subgroup", res.wheat), cex=0.45, col="darkgrey", border="darkgrey")
-
+addpoly(model1b, 
+        row=0, 
+        mlab=mlabfun("RE Model for all studies", model1), cex=0.45, col="lightgrey", border="lightgrey")
+text(3157, 0, "-", cex=22, col="white")
+text(3157, 0, "1565.95 [ -623.71, 3755.62]", cex=0.465)
 
 ## testing model
 #Cook's Distance plot for influential studies
