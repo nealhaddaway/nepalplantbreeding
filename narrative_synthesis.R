@@ -20,7 +20,9 @@ ggplot(crop_sum, aes(x=Crop, y=as.numeric(n))) +
   geom_bar(stat="identity", fill="#24BBE1") +
   xlab('Crop') +
   ylab('Studies') +
-  scale_y_continuous(limits = c(0, 80))
+  scale_y_continuous(limits = c(0, 80)) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank())
 
 
 #' Breeding methods and comparisons
@@ -85,7 +87,9 @@ ggplot(outcome_sum, aes(x=Outcome, y=n, fill=Resistance)) +
   scale_fill_manual(values = c("Cold" = "#ED412A", "Drought" = "#C5962E", "Insect/arthropod" = "#F89D29",
                                "Pathogen" = "#5FB947", "Other (specify)" = "#24BBE1"),
                     breaks = c("Cold", "Drought", "Insect/arthropod",
-                               "Pathogen", "Other (specify)"))
+                               "Pathogen", "Other (specify)")) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank())
 
 
 #' Crops by outcome
@@ -124,7 +128,9 @@ scale_sum <- rbind(scale_sum, data.frame(`Study scale`="National", n=0, check.na
 ggplot(scale_sum, aes(x=`Study scale`, y=n)) +
   geom_bar(stat="identity", fill="#24BBE1") +
   xlab('Study scale') +
-  ylab('Studies')
+  ylab('Studies') +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank())
 
 #Study length
 length_sum <- data %>% 
@@ -132,9 +138,11 @@ length_sum <- data %>%
   summarise(n = n())
 length_sum$`Study length (measurement period in months)` <- as.numeric(length_sum$`Study length (measurement period in months)`)
 
-ggplot(length_sum, aes(x=`Study length (measurement period in months)`)) +
-  geom_histogram(colour="white", fill="#24BBE1") +
-  ylab('Studies') 
+ggplot(length_sum, aes(x=`Study length (measurement period in months)`, y=n)) +
+  geom_bar(stat="identity", colour="white", fill="#24BBE1") +
+  ylab('Studies')  +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank())
 
 #Sample size
 samplesize_sum <- data %>% 
@@ -145,7 +153,9 @@ samplesize_sum$`Sample size (Number of true replicates)` <- as.numeric(samplesiz
 ggplot(samplesize_sum, aes(x=`Sample size (Number of true replicates)`, y=n)) +
   geom_bar(stat="identity", fill="#24BBE1") +
   ylab('Studies') +
-  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11,12))
+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11,12)) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank())
 
 
 #' Critical appraisal

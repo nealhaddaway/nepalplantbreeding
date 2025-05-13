@@ -3,6 +3,11 @@
 # import data
 library(readxl)
 library(metafor)
+rm(list = ls())
+devtools::install_github("daniel1noble/orchaRd", ref = "main", force = TRUE)
+pacman::p_load(devtools, tidyverse, metafor, patchwork, R.rsp, orchaRd, emmeans,
+               ape, phytools, flextable)
+library(orchaRd)
 
 data <- read_excel("Full data extraction sheet.xlsx", 
                   sheet = "full")
@@ -13,7 +18,7 @@ data <- read_excel("Full data extraction sheet.xlsx",
 hyb_int_data <- subset(data, `hyb-int`==1)
 
 # calculate effect sizes
-ES_data <- data.frame(ID=NULL, short_citation=NULL, crop=NULL, ES=NULL, PSD=NULL, CA_judgement=NULL)
+ES_data <- data.frame(ID=NULL, short_citation=NULL, crop=NULL, baseline=NULL, ES=NULL, PSD=NULL, CA_judgement=NULL)
 for (i in 1:length(unique(hyb_int_data$ID))){
   subset_data <- subset(hyb_int_data, ID==unique(hyb_int_data$ID)[i])
   # prepare data
@@ -23,6 +28,7 @@ for (i in 1:length(unique(hyb_int_data$ID))){
   # subset interventions
   hybrid <- subset(subset_data, `intervention main category`=="hybridization") 
   introd <- subset(subset_data, `intervention main category`=="introduction")
+  baseline <- introd$`mean (kg/ha)`
   #calculate ES and PSD
   ES <- hybrid$`mean (kg/ha)` - introd$`mean (kg/ha)`
   PSD <- sqrt((((hybrid$n-1)*(hybrid$SD^2))+((introd$n-1)*(introd$SD^2))) / (hybrid$n+introd$n-2))
@@ -31,6 +37,7 @@ for (i in 1:length(unique(hyb_int_data$ID))){
   new_data <- data.frame(ID=unique(hyb_int_data$ID)[i], 
                          short_citation=short_cit, 
                          crop=crop, 
+                         baseline=baseline,
                          ES=ES, 
                          PSD=PSD,
                          CA_judgement=CA_judgement)
@@ -43,17 +50,40 @@ ES_data <- ES_data[order(ES_data$crop, rev(ES_data$short_citation)),]
 
 # set up model
 model1 <- rma.mv(yi=ES, 
-                V=PSD, 
-                data=ES_data, 
-                mods=~factor(crop),
-                method="ML", 
-                random=~ID|1)
+                 V=PSD, 
+                 data=ES_data, 
+                 mods=~factor(crop)*baseline,
+                 method="ML", 
+                 random=~1|ID)
 model1b <- rma.mv(yi=ES, 
                   V=PSD, 
                   data=ES_data, 
                   method="ML", 
-                  random=~ID|1)
+                  random=~1|ID)
+model_results <- orchaRd::mod_results(model1b, mod = "1", at = NULL, group = "ID")
 summary(model1)
+
+# meta-regression plot
+ES_data$colour <- ES_data$crop
+ES_data$colour <- gsub("wheat", "#F71735", ES_data$colour)
+ES_data$colour <- gsub("maize", "#41EAD4", ES_data$colour)
+ES_data$colour <- gsub("rice", "#FDFFFC", ES_data$colour)
+ES_data$colour <- gsub("potato", "#FF9F1C", ES_data$colour)
+regplot(model1, mod="baseline", pi=TRUE, refline=1, legend=FALSE,
+        label="piout", labsize=0.8,
+        bg=ES_data$colour, xlab="Baseline yield (kg/ha)", ylab="Yield difference (kg/ha)") 
+
+# orchard plot
+I2 <- orchaRd::i2_ml(model1b)
+orchaRd::orchard_plot(model1b, group = "ID", xlab = "Raw mean effect size (kg/ha)",
+                      transfm = "none") +
+  annotate(geom = "text", x = 0.8, y = -3000, 
+           label = paste0("italic(I)^{2} == ", round(I2[1],4), "*\"%\""), 
+           color = "black", parse = TRUE, size = 5) 
+# caterpillar plot
+orchaRd::caterpillars(model1b, mod = "1", xlab = "Standardised mean difference", group="ID")
+
+## ADDED INTERACTION ##
 
 ### a little helper function to add Q-test, I^2, and tau^2 estimate info
 mlabfun <- function(text, x) {
