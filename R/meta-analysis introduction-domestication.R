@@ -1,15 +1,18 @@
 #' Meta-analysis for Nepal plant breeding meta-analysis
 
 # import data
+library(tidyverse)
 library(readxl)
 library(metafor)
 
-data <- read_excel("Full data extraction sheet.xlsx", 
-                  sheet = "full")
+data <- readRDS(here::here("data/Full_data_extraction_sheet.RDS"))
 
 # Introduction - Domestication
 # subset data
 int_dom_data <- subset(data, `int-dom`==1)
+
+head(int_dom_data)
+str(int_dom_data)
 
 # calculate effect sizes
 ES_data <- data.frame(ID=NULL, short_citation=NULL, crop=NULL, ES=NULL, PSD=NULL, CA_judgement=NULL)
@@ -24,14 +27,16 @@ for (i in 1:length(unique(int_dom_data$ID))){
   introd <- subset(subset_data, `intervention main category`=="introduction")
   #calculate ES and PSD
   ES <- introd$`mean (kg/ha)` - domest$`mean (kg/ha)`
-  PSD <- sqrt((((introd$n-1)*(introd$SD^2))+((domest$n-1)*(domest$SD^2))) / (introd$n+domest$n-2))
+  # Calculate correct sampling variance of the mean difference
+  V <- (hybrid$SD^2 / hybrid$n) + (introd$SD^2 / introd$n)
+  #PSD <- sqrt((((introd$n-1)*(introd$SD^2))+((domest$n-1)*(domest$SD^2))) / (introd$n+domest$n-2))
     
   # generate df
   new_data <- data.frame(ID=unique(int_dom_data$ID)[i], 
                          short_citation=short_cit, 
                          crop=crop, 
                          ES=ES, 
-                         PSD=PSD,
+                         V=V,
                          CA_judgement=CA_judgement)
   ES_data <- rbind(ES_data, new_data)
 }
@@ -42,13 +47,13 @@ ES_data <- ES_data[order(ES_data$crop, rev(ES_data$short_citation)),]
 
 # set up model
 model1 <- rma.mv(yi=ES, 
-                V=PSD, 
+                V=V, 
                 data=ES_data, 
                 mods=~factor(crop),
                 method="ML", 
                 random=~ID|1)
 model1b <- rma.mv(yi=ES, 
-                 V=PSD, 
+                 V=V, 
                  data=ES_data, 
                  method="ML", 
                  random=~ID|1)
@@ -64,44 +69,46 @@ mlabfun <- function(text, x) {
                     tau^2, " = ", .(fmtx(x$tau2, digits=2)), ")")))}
 
 # fit models for each group
-subset_caul <- subset(ES_data, crop=="cauliflower")
-res.caul <- rma.mv(yi=ES, 
-                   V=PSD, 
-                   data=subset_caul, 
-                   method="ML", 
-                   random=~ID|1)
+# Not enough data in cauliflower!
+# subset_caul <- subset(ES_data, crop=="cauliflower")
+# res.caul <- rma.mv(yi=ES, 
+#                    V=V, 
+#                    data=subset_caul, 
+#                    method="ML", 
+#                    random=~ID|1)
 subset_maize <- subset(ES_data, crop=="maize")
 res.maize <- rma.mv(yi=ES, 
-                    V=PSD, 
+                    V=V, 
                     data=subset_maize, 
                     method="ML", 
                     random=~ID|1)
 subset_potato <- subset(ES_data, crop=="potato")
 res.potato <- rma.mv(yi=ES, 
-                     V=PSD, 
+                     V=V, 
                      data=subset_potato, 
                      method="ML", 
                      random=~ID|1)
 subset_rice <- subset(ES_data, crop=="rice")
 res.rice <- rma.mv(yi=ES, 
-                   V=PSD, 
+                   V=V, 
                    data=subset_rice, 
                    method="ML", 
                    random=~ID|1)
-subset_wheat <- subset(ES_data, crop=="wheat")
-res.wheat <- rma.mv(yi=ES, 
-                    V=PSD, 
-                    data=subset_wheat, 
-                    method="ML", 
-                    random=~ID|1)
+# Not enough data for wheat!
+# subset_wheat <- subset(ES_data, crop=="wheat")
+# res.wheat <- rma.mv(yi=ES, 
+#                     V=V, 
+#                     data=subset_wheat, 
+#                     method="ML", 
+#                     random=~ID|1)
 
 # forest plot
 # calculate groups
-n_cauliflower <- nrow(subset(ES_data, crop=="cauliflower"))
+#n_cauliflower <- nrow(subset(ES_data, crop=="cauliflower"))
 n_maize <- nrow(subset(ES_data, crop=="maize"))
 n_potato <- nrow(subset(ES_data, crop=="potato"))
 n_rice <- nrow(subset(ES_data, crop=="rice"))
-n_wheat <- nrow(subset(ES_data, crop=="wheat"))
+#n_wheat <- nrow(subset(ES_data, crop=="wheat"))
 
 # plot
 forest(model1, addfit=FALSE, cex=0.45, xlab="Effect size (kg/ha)",
@@ -159,9 +166,66 @@ text(3157, 0, "1565.95 [ -623.71, 3755.62]", cex=0.465)
 x<-cooks.distance(model1)
 plot(x,type='o',pch=19,xlab="Study number",ylab="Cook's Distance")
 
+#Studies 10 and 11 are highly influential. Their inclusion likely drives the meta-analytic effect size and/or heterogeneity substantially.
+
+influential_studies <- which(x > 1)
+print(influential_studies)
+
+ES_data_sens <- ES_data[-influential_studies, ]
+model_sens <- rma.mv(yi=ES, V=V, data=ES_data_sens, 
+                     method="ML", random=~ID|1)
+summary(model_sens)
+
+# Build a sensitivity table
+
+# For full model
+pred_full <- predict(model1)
+full_est <- pred_full$pred
+full_ci_lb <- pred_full$ci.lb
+full_ci_ub <- pred_full$ci.ub
+
+# Between-study variance
+tau2_full <- model1b$sigma2  # or model1b$tau2 if you have it
+
+# Average within-study sampling variance
+mean_V_full <- mean(ES_data$V, na.rm = TRUE)
+
+# I²
+I2_full <- (tau2_full / (tau2_full + mean_V_full)) * 100
+
+# For sensitivity model (after removing studies)
+model_sens <- rma.mv(yi=ES, V=V, data=ES_data_sens, method="ML", random=~ID|1)
+pred_sens <- predict(model_sens)
+sens_est <- pred_sens$pred
+sens_ci_lb <- pred_sens$ci.lb
+sens_ci_ub <- pred_sens$ci.ub
+
+tau2_sens <- model_sens$sigma2
+mean_V_sens <- mean(ES_data_sens$V, na.rm = TRUE)
+
+I2_sens <- (tau2_sens / (tau2_sens + mean_V_sens)) * 100
+
+# Assemble table
+results_table <- data.frame(
+  Model = c("All studies", "Sensitivity (excluding studies 10 & 11)"),
+  Estimate_kg_ha = round(c(full_est, sens_est), 2),
+  CI_lower = round(c(full_ci_lb, sens_ci_lb), 2),
+  CI_upper = round(c(full_ci_ub, sens_ci_ub), 2),
+  Tau2 = round(c(model1$sigma2, model_sens$sigma2), 1),
+  I2 = round(c(I2_full, I2_full), 1)
+)
+
+results_table
+
+
+##Effect Size Estimate Changed Substantially!!!!!!
+#All studies: ~1555 kg/ha increase, but not statistically significant (CI includes 0).
+#Without studies 10 & 11: ~550 kg/ha increase, and statistically significant (CI does not include 0).
+#Conclusion changes depending on whether you include those two influential studies.
+
 # Including CA_judgement as a moderator has no significant effect
 model1b <- rma.mv(yi=ES, 
-                 V=PSD, 
+                 V=V, 
                  data=ES_data, 
                  mods=~factor(crop)+CA_judgement,
                  method="ML", 
@@ -169,6 +233,24 @@ model1b <- rma.mv(yi=ES,
 model1b
 
 #publication bias
-funnel(model1)
-regtest(rma(yi=ES,vi=PSD,data=ES_data,method="ML"))
+# funnel(model1)
+# regtest(rma(yi=ES,vi=PSD,data=ES_data,method="ML"))
+
+# Extract residuals and standard errors
+ES_data$resid <- resid(model1, type = "response")
+ES_data$sei <- sqrt(ES_data$V)  # V is the sampling variance per effect size
+
+# 3. Regress residuals on standard errors (Nakagawa-style bias test)
+bias_test <- lm(resid ~ sei, data = ES_data)
+
+
+# 4. Output summary
+summary(bias_test)
+## if sei is significant then there is small study bias
+
+# Plot it
+plot(ES_data$sei, ES_data$resid,
+     xlab = "Standard Error", ylab = "Residuals",
+     main = "Small-Study Effects Test (Nakagawa)")
+abline(bias_test, col = "red", lwd = 2)
 

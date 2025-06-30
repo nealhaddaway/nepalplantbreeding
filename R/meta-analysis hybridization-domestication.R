@@ -1,12 +1,11 @@
 #' Meta-analysis for Nepal plant breeding meta-analysis
 
 # import data
+library(tidyverse)
 library(readxl)
 library(metafor)
 
-data <- read_excel("Full data extraction sheet.xlsx", 
-                  sheet = "full")
-
+data <- readRDS(here::here("data/Full_data_extraction_sheet.RDS"))
 
 # Hybridisation - Domestication
 # subset data
@@ -25,14 +24,16 @@ for (i in 1:length(unique(hyb_dom_data$ID))){
   domest <- subset(subset_data, `intervention main category`=="domestication")
   #calculate ES and PSD
   ES <- hybrid$`mean (kg/ha)` - domest$`mean (kg/ha)`
-  PSD <- sqrt((((hybrid$n-1)*(hybrid$SD^2))+((domest$n-1)*(domest$SD^2))) / (hybrid$n+domest$n-2))
+  # Calculate correct sampling variance of the mean difference
+  V <- (hybrid$SD^2 / hybrid$n) + (introd$SD^2 / introd$n)
+  #PSD <- sqrt((((hybrid$n-1)*(hybrid$SD^2))+((domest$n-1)*(domest$SD^2))) / (hybrid$n+domest$n-2))
     
   # generate df
   new_data <- data.frame(ID=unique(hyb_dom_data$ID)[i], 
                          short_citation=short_cit, 
                          crop=crop, 
                          ES=ES, 
-                         PSD=PSD,
+                         V=V,
                          CA_judgement=CA_judgement)
   ES_data <- rbind(ES_data, new_data)
 }
@@ -43,13 +44,13 @@ ES_data <- ES_data[order(ES_data$crop, rev(ES_data$short_citation)),]
 
 # set up model
 model1 <- rma.mv(yi=ES, 
-                V=PSD, 
+                V=V, 
                 data=ES_data, 
                 mods=~factor(crop),
                 method="ML", 
                 random=~ID|1)
 model1b <- rma.mv(yi=ES, 
-                 V=PSD, 
+                 V=V, 
                  data=ES_data,
                  method="ML", 
                  random=~ID|1)
@@ -65,44 +66,47 @@ mlabfun <- function(text, x) {
                     tau^2, " = ", .(fmtx(x$tau2, digits=2)), ")")))}
 
 # fit models for each group
-subset_caul <- subset(ES_data, crop=="cauliflower")
-res.caul <- rma.mv(yi=ES, 
-                   V=PSD, 
-                   data=subset_caul, 
-                   method="ML", 
-                   random=~ID|1)
+# Not enough data 
+#subset_caul <- subset(ES_data, crop=="cauliflower")
+# res.caul <- rma.mv(yi=ES, 
+#                    V=V, 
+#                    data=subset_caul, 
+#                    method="ML", 
+#                    random=~ID|1)
 subset_maize <- subset(ES_data, crop=="maize")
 res.maize <- rma.mv(yi=ES, 
-                    V=PSD, 
+                    V=V, 
                     data=subset_maize, 
                     method="ML", 
                     random=~ID|1)
-subset_potato <- subset(ES_data, crop=="potato")
-res.potato <- rma.mv(yi=ES, 
-                     V=PSD, 
-                     data=subset_potato, 
-                     method="ML", 
-                     random=~ID|1)
+#Not enough data
+# subset_potato <- subset(ES_data, crop=="potato")
+# res.potato <- rma.mv(yi=ES, 
+#                      V=V, 
+#                      data=subset_potato, 
+#                      method="ML", 
+#                      random=~ID|1)
 subset_rice <- subset(ES_data, crop=="rice")
 res.rice <- rma.mv(yi=ES, 
-                   V=PSD, 
+                   V=V, 
                    data=subset_rice, 
                    method="ML", 
                    random=~ID|1)
-subset_wheat <- subset(ES_data, crop=="wheat")
-res.wheat <- rma.mv(yi=ES, 
-                    V=PSD, 
-                    data=subset_wheat, 
-                    method="ML", 
-                    random=~ID|1)
+# Not enough data
+# subset_wheat <- subset(ES_data, crop=="wheat")
+# res.wheat <- rma.mv(yi=ES, 
+#                     V=V, 
+#                     data=subset_wheat, 
+#                     method="ML", 
+#                     random=~ID|1)
 
 # forest plot
 # calculate groups
-n_cauliflower <- nrow(subset(ES_data, crop=="cauliflower"))
+#n_cauliflower <- nrow(subset(ES_data, crop=="cauliflower"))
 n_maize <- nrow(subset(ES_data, crop=="maize"))
-n_potato <- nrow(subset(ES_data, crop=="potato"))
+#n_potato <- nrow(subset(ES_data, crop=="potato"))
 n_rice <- nrow(subset(ES_data, crop=="rice"))
-n_wheat <- nrow(subset(ES_data, crop=="wheat"))
+#n_wheat <- nrow(subset(ES_data, crop=="wheat"))
 
 # plot
 forest(model1, addfit=FALSE, cex=0.45, xlab="Effect size (kg/ha)",
@@ -151,9 +155,72 @@ addpoly(model1b,
 x<-cooks.distance(model1)
 plot(x,type='o',pch=19,xlab="Study number",ylab="Cook's Distance")
 
+#Study 9
+
+influential_studies <- which(x > 1)
+print(influential_studies)
+
+ES_data_sens <- ES_data[-influential_studies, ]
+model_sens <- rma.mv(yi=ES, V=V, data=ES_data_sens, 
+                     mods=~factor(crop),
+                     method="ML", random=~ID|1)
+summary(model_sens)
+summary(model1)
+
+# Build a sensitivity table
+
+# For full model
+pred_full <- predict(model1)
+full_est <- pred_full$pred
+full_ci_lb <- pred_full$ci.lb
+full_ci_ub <- pred_full$ci.ub
+
+# Between-study variance
+tau2_full <- model1b$sigma2  # or model1b$tau2 if you have it
+
+# Average within-study sampling variance
+mean_V_full <- mean(ES_data$V, na.rm = TRUE)
+
+# I²
+I2_full <- (tau2_full / (tau2_full + mean_V_full)) * 100
+
+# For sensitivity model (after removing studies)
+pred_sens <- predict(model_sens)
+sens_est <- pred_sens$pred
+sens_ci_lb <- pred_sens$ci.lb
+sens_ci_ub <- pred_sens$ci.ub
+
+tau2_sens <- model_sens$sigma2
+mean_V_sens <- mean(ES_data_sens$V, na.rm = TRUE)
+
+I2_sens <- (tau2_sens / (tau2_sens + mean_V_sens)) * 100
+
+Model = c(rep("All studies",14,), rep("Sensitivity (excluding studies 6 & 7)",13))
+Estimate_kg_ha = round(c(full_est, sens_est), 2)
+CI_lower = round(c(full_ci_lb, sens_ci_lb), 2)
+CI_upper = round(c(full_ci_ub, sens_ci_ub), 2)
+Tau2 = c(rep(round(model1$sigma2,1),14),c(rep(round(model_sens$sigma2,1),13)))
+I2 = c(rep(round(I2_full,1),14),c(rep(round(I2_sens,1),13)))
+
+
+
+# Assemble table
+results_table <- data.frame(
+  Model = Model,
+  Estimate_kg_ha = Estimate_kg_ha,
+  CI_lower = CI_lower,
+  CI_upper = CI_upper,
+  Tau2 = Tau2,
+  I2 = I2
+)
+
+results_table
+
+
+
 # Including CA_judgement as a moderator has no significant effect
 model1b <- rma.mv(yi=ES, 
-                 V=PSD, 
+                 V=V, 
                  data=ES_data, 
                  mods=~factor(crop)+CA_judgement,
                  method="ML", 
@@ -161,6 +228,24 @@ model1b <- rma.mv(yi=ES,
 model1b
 
 #publication bias
-funnel(model1)
-regtest(rma(yi=ES,vi=PSD,data=ES_data,method="ML"))
+# funnel(model1)
+# regtest(rma(yi=ES,vi=V,data=ES_data,method="ML"))
+# Extract residuals and standard errors
+ES_data$resid <- resid(model1, type = "response")
+ES_data$sei <- sqrt(ES_data$V)  # V is the sampling variance per effect size
+
+# 3. Regress residuals on standard errors (Nakagawa-style bias test)
+bias_test <- lm(resid ~ sei, data = ES_data)
+
+
+# 4. Output summary
+summary(bias_test)
+## if sei is significant then there is small study bias
+
+# Plot it
+plot(ES_data$sei, ES_data$resid,
+     xlab = "Standard Error", ylab = "Residuals",
+     main = "Small-Study Effects Test (Nakagawa)")
+abline(bias_test, col = "red", lwd = 2)
+
 
